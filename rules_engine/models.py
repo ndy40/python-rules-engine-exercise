@@ -3,6 +3,10 @@ import abc
 OPERATOR_FUNC_MAPPINGS = {
     "is above": lambda data_value, rule_value: data_value > rule_value,
     "is below": lambda data_value, rule_value: data_value < rule_value,
+    "equals": lambda data_value, rule_value: data_value == rule_value,
+    "not equals": lambda data_value, rule_value: data_value != rule_value,
+    "at most": lambda data_value, rule_value: data_value >= rule_value,
+    "at least": lambda data_value, rule_value: data_value <= rule_value
 }
 
 
@@ -11,10 +15,10 @@ class AbstractRule(abc.ABC):
     def evaluate(self, data): ...
 
     def __and__(self, other):
-        return AndRule(self, other)
+        return _AndRule(self, other)
 
     def __or__(self, other):
-        return OrRule(self, other)
+        return _OrRule(self, other)
 
 
 class Rule(AbstractRule):
@@ -33,7 +37,7 @@ class Rule(AbstractRule):
         return False
 
 
-class AndRule(AbstractRule):
+class _AndRule(AbstractRule):
     def __init__(self, first: AbstractRule, second: AbstractRule):
         self.first = first
         self.second = second
@@ -42,7 +46,7 @@ class AndRule(AbstractRule):
         return self.first.evaluate(data) and self.second.evaluate(data)
 
 
-class OrRule(AbstractRule):
+class _OrRule(AbstractRule):
     def __init__(self, first: AbstractRule, second: AbstractRule):
         self.first = first
         self.second = second
