@@ -1,49 +1,59 @@
 from rules_engine.models import Rule
 
+AND_RULES_CLAUSE = "and"
+OR_RULES_CLAUSE = "or"
 
-dict_rule = {
-    "and": {"credit_rating": {"is above": 50}, "flood_risk": {"is below": 10}},
-    "or": {"revenue": {"is above": 900}, "flood_risk": {"is below": 10}},
-}
-
-SUPPORTED_RULES_CLAUSE = ["and", "or"]
+SUPPORTED_RULES_CLAUSE = [AND_RULES_CLAUSE, OR_RULES_CLAUSE]
 
 
-def _eval_rule(ops, rule1, rule2):
-    if rule1 is None:
-        rule1 = rule2
+def _combine_rules(ops, left_rule, right_rule):
+    if left_rule is None:
+        left_rule = right_rule
 
     match ops:
         case "and":
-            rule1 = rule1 & rule2
+            left_rule = left_rule & right_rule
         case "or":
-            rule1 = rule1 | rule2
-    return rule1
+            left_rule = left_rule | right_rule
+    return left_rule
+
+
+def _derive_operator_and_condition(variable, condition) -> tuple[str, dict]:
+    if isinstance(condition, dict):
+        op, *_ = condition
+    else:
+        op = variable
+        condition = {variable: condition}
+    return (
+        op,
+        condition,
+    )
 
 
 def _build_rule_from_dict(ops_clause, data):
     tmp = None
     for variable, condition in data.items():
-        if isinstance(condition, dict):
-            op, *_ = condition
-        else:
-            op = variable
-            condition = {variable: condition}
+        operator, condition = _derive_operator_and_condition(variable, condition)
 
-        # create rule from op
-        if op not in SUPPORTED_RULES_CLAUSE:
-            ops_clause = "and"
+        if operator not in SUPPORTED_RULES_CLAUSE:
+            # most likely a variable, so we force an "and" combination.
+            ops_clause = AND_RULES_CLAUSE
 
-            _, expr = next(iter(condition.items()))
+            # Extract operator from structure {'operator': value} or {'variable': {'operatore': value}}
+            operator, expr = next(iter(condition.items()))
+
+            # TODO: Refactor to remove nested if statements.
             if isinstance(expr, dict):
-                op, value = next(iter(expr.items()))
+                operator, value = next(iter(expr.items()))
             else:
-                op, value = (_, expr)
+                value = expr
         else:
-            value = condition[op]
-        current_rule = Rule(variable=variable, op=op, value=value)
+            value = condition[operator]
+
+        current_rule = Rule(variable=variable, op=operator, value=value)
+
         tmp = (
-            _eval_rule(ops_clause, tmp, current_rule)
+            _combine_rules(ops_clause, tmp, current_rule)
             if tmp is not None
             else current_rule
         )
