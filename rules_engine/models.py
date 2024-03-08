@@ -6,13 +6,16 @@ OPERATOR_FUNC_MAPPINGS = {
     "equals": lambda data_value, rule_value: data_value == rule_value,
     "not equals": lambda data_value, rule_value: data_value != rule_value,
     "at most": lambda data_value, rule_value: data_value >= rule_value,
-    "at least": lambda data_value, rule_value: data_value <= rule_value
+    "at least": lambda data_value, rule_value: data_value <= rule_value,
 }
 
 
 class AbstractRule(abc.ABC):
     @abc.abstractmethod
     def evaluate(self, data): ...
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}"
 
     def __and__(self, other):
         return _AndRule(self, other)
@@ -36,11 +39,17 @@ class Rule(AbstractRule):
 
         return False
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.variable}, {self.op}, {self.value})"
+
 
 class _AndRule(AbstractRule):
     def __init__(self, first: AbstractRule, second: AbstractRule):
         self.first = first
         self.second = second
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.first}, {self.second})"
 
     def evaluate(self, data):
         return self.first.evaluate(data) and self.second.evaluate(data)
@@ -50,6 +59,9 @@ class _OrRule(AbstractRule):
     def __init__(self, first: AbstractRule, second: AbstractRule):
         self.first = first
         self.second = second
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.first}, {self.second})"
 
     def evaluate(self, data):
         return self.first.evaluate(data) or self.second.evaluate(data)
